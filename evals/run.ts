@@ -137,7 +137,8 @@ async function waitForFinish(stream: AsyncIterable<Event>, sessionID: string, st
       if (part.tool === "studio-preview") milestone("preview")
     }
     if (event.type === "session.error" && (!event.properties.sessionID || event.properties.sessionID === sessionID)) {
-      throw new Error(event.properties.error?.data.message || `Evaluation session failed after ${Date.now() - started}ms`)
+      const message = event.properties.error?.data.message
+      throw new Error(typeof message === "string" ? message : `Evaluation session failed after ${Date.now() - started}ms`)
     }
     if (event.type === "session.idle" && event.properties.sessionID === sessionID) return
   }
