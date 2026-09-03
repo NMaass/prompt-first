@@ -25,9 +25,9 @@ describe("EffectGateway", () => {
   test("live effects are denied without exact approval", async () => {
     const gateway = new EffectGateway(new FakeLive())
     const effect = gateway.request({ ...draft, mode: "live" })
-    const receipt = await gateway.execute({ effectId: effect.id, idempotencyKey: "one" })
-    expect(receipt.status).toBe("failed")
-    expect(receipt.summary).toContain("approval")
+    await expect(gateway.execute({ effectId: effect.id, idempotencyKey: "one" })).rejects.toThrow(
+      "Live effects require approval",
+    )
   })
 
   test("approval is one-time and bound to the effect", async () => {
@@ -36,12 +36,13 @@ describe("EffectGateway", () => {
     const second = gateway.request({ ...draft, mode: "live", summary: "Different charge" })
     const approval = gateway.approve(first.id)
 
-    const wrong = await gateway.execute({
-      effectId: second.id,
-      idempotencyKey: "wrong",
-      approvalToken: approval.token,
-    })
-    expect(wrong.status).toBe("failed")
+    await expect(
+      gateway.execute({
+        effectId: second.id,
+        idempotencyKey: "wrong",
+        approvalToken: approval.token,
+      }),
+    ).rejects.toThrow("Approval does not match this effect")
 
     const ok = await gateway.execute({
       effectId: first.id,
@@ -50,12 +51,13 @@ describe("EffectGateway", () => {
     })
     expect(ok.status).toBe("succeeded")
 
-    const reused = await gateway.execute({
-      effectId: first.id,
-      idempotencyKey: "different-key",
-      approvalToken: approval.token,
-    })
-    expect(reused.status).toBe("failed")
+    await expect(
+      gateway.execute({
+        effectId: first.id,
+        idempotencyKey: "different-key",
+        approvalToken: approval.token,
+      }),
+    ).rejects.toThrow("Approval is invalid or already used")
   })
 })
 
