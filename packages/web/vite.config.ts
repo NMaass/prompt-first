@@ -9,6 +9,7 @@ export default defineConfig({
     alias: { "@": path.resolve(import.meta.dirname, "src") },
   },
   server: {
+    port: 3000,
     proxy: {
       "/studio": "http://127.0.0.1:4100",
       "/session": "http://127.0.0.1:4096",
