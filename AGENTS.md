@@ -1,128 +1,36 @@
-- To regenerate the JavaScript SDK, run `./packages/sdk/js/script/build.ts`.
-- ALWAYS USE PARALLEL TOOLS WHEN APPLICABLE.
-- The default branch in this repo is `dev`.
-- Local `main` ref may not exist; use `dev` or `origin/dev` for diffs.
-- Prefer automation: execute requested actions without confirmation unless blocked by missing info or safety/irreversibility.
+# Prompt First engineering rules
 
-## Style Guide
+Prompt First teaches product judgment around autonomous software agents. Optimize for the learner's product experience, evidence quality, and bounded consequences rather than exposure to implementation details.
 
-### General Principles
+## Product invariants
 
-- Keep things in one function unless composable or reusable
-- Avoid `try`/`catch` where possible
-- Avoid using the `any` type
-- Prefer single word variable names where possible
-- Use Bun APIs when possible, like `Bun.file()`
-- Rely on type inference when possible; avoid explicit type annotations or interfaces unless necessary for exports or clarity
-- Prefer functional array methods (flatMap, filter, map) over for loops; use type guards on filter to maintain type inference downstream
+- The learner owns intent, tradeoffs, risk tolerance, and the release decision.
+- The builder may act immediately on reversible implementation work.
+- Do not add forced plan approval, prompt-writing lessons, Blockly, or programming-syntax curriculum.
+- Every important requirement should be able to point to evidence or remain visibly unverified.
+- Real external effects must pass through the trusted host boundary and exact-scope approval.
+- Model output is never a safety boundary.
+- The learner experience is language-agnostic; runtime profiles may be deliberately bounded.
 
-### Naming
+## UI invariants
 
-Prefer single word names for variables and functions. Only use multiple words if necessary.
+- Preserve focus, drafts, scroll position, and panel geometry across non-spatial state changes.
+- Use native controls and correct semantic roles.
+- Keep persistent controls mounted when temporarily unavailable.
+- Do not use `transition: all`.
+- Do not hide consequential state behind animation or ephemeral toasts.
+- Mobile layouts must remain fully operable.
 
-### Naming Enforcement (Read This)
+## Code conventions
 
-THIS RULE IS MANDATORY FOR AGENT WRITTEN CODE.
+- TypeScript is strict. Do not introduce `any` in product code.
+- Prefer small typed modules with explicit domain types.
+- Do not add explanatory comments when the code can be made self-describing.
+- Keep runtime-provider, sandbox-provider, browser-runner, and effect-gateway interfaces replaceable.
+- Do not add dependencies without a concrete product requirement.
 
-- Use single word names by default for new locals, params, and helper functions.
-- Multi-word names are allowed only when a single word would be unclear or ambiguous.
-- Do not introduce new camelCase compounds when a short single-word alternative is clear.
-- Before finishing edits, review touched lines and shorten newly introduced identifiers where possible.
-- Good short names to prefer: `pid`, `cfg`, `err`, `opts`, `dir`, `root`, `child`, `state`, `timeout`.
-- Examples to avoid unless truly required: `inputPID`, `existingClient`, `connectTimeout`, `workerPath`.
+## Verification
 
-```ts
-// Good
-const foo = 1
-function journal(dir: string) {}
+Before merging, run `bun run check`.
 
-// Bad
-const fooBar = 1
-function prepareJournal(dir: string) {}
-```
-
-Reduce total variable count by inlining when a value is only used once.
-
-```ts
-// Good
-const journal = await Bun.file(path.join(dir, "journal.json")).json()
-
-// Bad
-const journalPath = path.join(dir, "journal.json")
-const journal = await Bun.file(journalPath).json()
-```
-
-### Destructuring
-
-Avoid unnecessary destructuring. Use dot notation to preserve context.
-
-```ts
-// Good
-obj.a
-obj.b
-
-// Bad
-const { a, b } = obj
-```
-
-### Variables
-
-Prefer `const` over `let`. Use ternaries or early returns instead of reassignment.
-
-```ts
-// Good
-const foo = condition ? 1 : 2
-
-// Bad
-let foo
-if (condition) foo = 1
-else foo = 2
-```
-
-### Control Flow
-
-Avoid `else` statements. Prefer early returns.
-
-```ts
-// Good
-function foo() {
-  if (condition) return 1
-  return 2
-}
-
-// Bad
-function foo() {
-  if (condition) return 1
-  else return 2
-}
-```
-
-### Schema Definitions (Drizzle)
-
-Use snake_case for field names so column names don't need to be redefined as strings.
-
-```ts
-// Good
-const table = sqliteTable("session", {
-  id: text().primaryKey(),
-  project_id: text().notNull(),
-  created_at: integer().notNull(),
-})
-
-// Bad
-const table = sqliteTable("session", {
-  id: text("id").primaryKey(),
-  projectID: text("project_id").notNull(),
-  createdAt: integer("created_at").notNull(),
-})
-```
-
-## Testing
-
-- Avoid mocks as much as possible
-- Test actual implementation, do not duplicate logic into tests
-- Tests cannot run from repo root (guard: `do-not-run-tests-from-root`); run from package dirs like `packages/opencode`.
-
-## Type Checking
-
-- Always run `bun typecheck` from package directories (e.g., `packages/opencode`), never `tsc` directly.
+For changes affecting agent behavior or safety, also run the relevant benchmark missions with `bun run eval` and inspect the generated run receipts rather than relying on the agent's self-report.

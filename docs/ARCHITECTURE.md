@@ -1,0 +1,176 @@
+# Architecture
+
+## Design objective
+
+Prompt First should feel like a real autonomous software workspace while keeping product-specific logic independent from any one coding-agent runtime, model provider, or sandbox vendor.
+
+The repository therefore owns orchestration contracts and evidence, not the coding engine.
+
+## System diagram
+
+```text
+┌──────────────────────────────── browser ────────────────────────────────┐
+│                                                                         │
+│  mission launcher                                                       │
+│       │                                                                 │
+│       ▼                                                                 │
+│  conversation ─────────── product artifacts ───────── preview iframe    │
+│       │                    │                                             │
+│       │                    ├── Mission Contract                          │
+│       │                    ├── Product Map                               │
+│       │                    └── Evidence Ledger                           │
+│       │                                                                 │
+│       ├──────── OpenCode SDK client ────────────────┐                   │
+│       │                                             │                   │
+│       └──────── studio control API ───────┐         │                   │
+└───────────────────────────────────────────┼─────────┼───────────────────┘
+                                            │         │
+                         ┌──────────────────┘         │
+                         ▼                            ▼
+                studio control plane          OpenCode runtime
+                ├── workspace provider        ├── studio-builder
+                ├── preview registry          ├── studio-coach
+                ├── browser verifier          ├── release-reviewer
+                └── effect gateway            ├── curated skills
+                                              └── structured tools
+                                                     │
+                                                     ▼
+                                               learner workspace
+```
+
+## Runtime boundary
+
+The web client speaks the published `@opencode-ai/sdk` API. The local control plane launches the pinned `opencode-ai` binary. OpenCode source is not vendored.
+
+This is deliberate:
+
+- upgrading or replacing the coding engine should not rewrite product UI;
+- model/provider experiments remain benchmark configuration;
+- security boundaries live outside model instructions;
+- Prompt First does not inherit unrelated TUI, release, provider, or community infrastructure.
+
+The current package versions are pinned so benchmark comparisons are reproducible.
+
+## Workspace provider
+
+`WorkspaceProvider` owns lifecycle, directory identity, and the preview capability associated with that workspace.
+
+The repository includes `LocalWorkspaceProvider` for development. It creates a fresh temporary directory, copies the selected runtime profile and curated `.opencode` configuration, initializes Git, records the mission, and tracks the one registered preview origin for that directory. It is intentionally labeled `development-only`.
+
+A production provider must replace it with an isolated environment that enforces:
+
+- filesystem isolation;
+- process isolation;
+- CPU/memory/disk limits;
+- controlled outbound network access;
+- secret isolation;
+- authenticated preview exposure;
+- lifecycle cleanup and kill controls.
+
+The learner UI must not change when the provider changes.
+
+## Runtime profiles
+
+A runtime profile is a bounded implementation environment with known operations:
+
+- create;
+- install/warm;
+- run;
+- preview;
+- test;
+- snapshot/restore;
+- destroy.
+
+Only `web-react` ships in the first implementation. Its development preview is fixed to port 5173 with `--strictPort`. This makes the learner experience language-invisible without pretending arbitrary runtimes are equally safe or measurable.
+
+## Agent roles
+
+### `studio-builder`
+
+The primary autonomous implementer. It can perform reversible project work without plan approval, use specialist skills, run local commands, and publish artifacts. External directory access is denied. External web access requires approval.
+
+### `studio-coach`
+
+A non-implementing subagent. It identifies at most one product decision the learner should own. It is not a tutorial state machine.
+
+### `release-reviewer`
+
+A read-only implementation reviewer that may run verification. It checks evidence and unresolved risk independently from the builder and distinguishes builder-reported claims from host receipts.
+
+## Structured artifact tools
+
+Agent/UI communication uses stable product-level tools:
+
+- `studio-contract`;
+- `studio-map`;
+- `studio-preview`;
+- `studio-evidence`;
+- `studio-browser-check`;
+- `studio-effect-request`.
+
+The UI derives state from completed tool parts in the session trace. This has several advantages over parsing prose:
+
+- artifact updates are typed;
+- evidence provenance can be retained;
+- activity remains inspectable;
+- models can change without changing UI parsing;
+- benchmark runners can score the same trace without rendering the app.
+
+`studio-evidence` is explicitly builder-reported. It cannot mint a trusted receipt. Trusted browser receipts are returned only by the host control plane.
+
+## Preview registration
+
+`studio-preview` is not merely a UI announcement. Before a preview becomes usable, the tool registers its URL with the control plane using the current workspace directory.
+
+The local provider accepts only configured preview hosts and ports. By default this means `localhost` or `127.0.0.1` on port `5173`. The registry stores the origin against the workspace directory.
+
+Subsequent trusted browser checks must match that registered origin. A request for `127.0.0.1:4096`, `127.0.0.1:4100`, another workspace, or an arbitrary internet origin is rejected before Playwright launches.
+
+A production sandbox provider should replace this local rule with a sandbox-issued authenticated preview origin.
+
+## Browser verification
+
+Browser checks execute in the trusted control plane with Playwright. The agent submits a preview URL and check kind through `studio-browser-check`; the host requires the exact registered workspace origin and then performs defense-in-depth protocol/hostname validation before launching a browser.
+
+Initial checks are deliberately narrow:
+
+- smoke/navigation + console errors;
+- responsive horizontal-overflow checks across three viewports;
+- keyboard focus reachability;
+- baseline semantic accessibility checks;
+- initial-load performance measurement.
+
+These checks create host receipts. They do not claim complete accessibility, production performance, business-logic correctness, or authorization correctness.
+
+## External effect gateway
+
+Email, payment, webhook, and identity effects are modeled as effects rather than arbitrary network calls.
+
+1. Agent calls `studio-effect-request`.
+2. UI registers the exact effect with the control plane.
+3. Mock effects execute automatically and return a receipt.
+4. Live effects remain pending.
+5. Learner explicitly approves the displayed live effect.
+6. Host issues a short-lived one-time token bound to the exact effect fingerprint.
+7. Host executes through a trusted live executor with an idempotency key.
+8. UI displays the receipt.
+
+The model never receives the live credential or a reusable approval capability.
+
+## Session flow
+
+1. Learner chooses or defines a mission.
+2. Control plane creates a dedicated workspace.
+3. Browser subscribes to OpenCode events scoped to that directory.
+4. Browser creates a session scoped to the same directory.
+5. Browser submits the starter message with a stable message ID.
+6. Builder edits and runs the product immediately.
+7. `studio-preview` registers and publishes the profile preview.
+8. Typed tool parts update learner artifacts.
+9. Host browser/effect operations attach provenance-bearing receipts.
+10. Learner redirects or stops the builder at any time.
+11. Ending the mission aborts the session and destroys the development workspace and preview registration.
+
+## Deployment shape
+
+The current repo is a research implementation, not a hosted classroom deployment. A production deployment should put the web app and control plane behind one authenticated origin, move the agent workspace to a remote sandbox provider, broker previews through authenticated sandbox URLs, and introduce classroom identity/retention policy without exposing sandbox credentials to the browser.
