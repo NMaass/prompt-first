@@ -25,7 +25,7 @@ export function deriveStudioState(messages: TimelineMessage[], mission: Mission)
       const input = part.state.input
       if (part.tool === "studio-contract" && isContract(input)) contract = input
       if (part.tool === "studio-map" && isMap(input)) map = input
-      if (part.tool === "studio-preview" && typeof input.url === "string") previewUrl = input.url
+      if (part.tool === "studio-preview" && isPreview(input)) previewUrl = input.url
       if (part.tool === "studio-evidence" && isEvidence(input)) evidence.set(input.requirementId, input)
       if (part.tool === "studio-browser-check") {
         const item = browserEvidence(part)
@@ -89,6 +89,10 @@ function isContract(value: Record<string, unknown>): value is MissionContract {
 
 function isMap(value: Record<string, unknown>): value is ProductMap {
   return [value.actors, value.surfaces, value.data, value.integrations, value.flows, value.permissions].every(strings)
+}
+
+function isPreview(value: Record<string, unknown>): value is Record<string, unknown> & { url: string } {
+  return typeof value.url === "string"
 }
 
 function isEvidence(value: Record<string, unknown>): value is Evidence {
