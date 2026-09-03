@@ -45,11 +45,13 @@ export type ProductMap = {
 }
 
 export type EvidenceStatus = "unverified" | "testing" | "passed" | "failed"
+export type EvidenceSource = "system" | "agent" | "host"
 
 export type Evidence = {
   requirementId: string
   requirement: string
   status: EvidenceStatus
+  source: EvidenceSource
   method: string
   detail: string
   receipt?: string

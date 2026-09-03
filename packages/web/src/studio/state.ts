@@ -26,7 +26,9 @@ export function deriveStudioState(messages: TimelineMessage[], mission: Mission)
       if (part.tool === "studio-contract" && isContract(input)) contract = input
       if (part.tool === "studio-map" && isMap(input)) map = input
       if (part.tool === "studio-preview" && isPreview(input)) previewUrl = input.url
-      if (part.tool === "studio-evidence" && isEvidence(input)) evidence.set(input.requirementId, input)
+      if (part.tool === "studio-evidence" && isAgentEvidence(input)) {
+        evidence.set(input.requirementId, { ...input, source: "agent", recordedAt: new Date().toISOString() })
+      }
       if (part.tool === "studio-browser-check") {
         const item = browserEvidence(part)
         if (item) evidence.set(item.requirementId, item)
@@ -62,6 +64,7 @@ function initialEvidence(mission: Mission): Evidence[] {
       requirementId: `A${index + 1}`,
       requirement,
       status: "unverified" as const,
+      source: "system" as const,
       method: "Not tested yet",
       detail: "The builder has not attached evidence for this requirement yet.",
     })),
@@ -69,6 +72,7 @@ function initialEvidence(mission: Mission): Evidence[] {
       requirementId: `Q${index + 1}`,
       requirement,
       status: "unverified" as const,
+      source: "system" as const,
       method: "Not tested yet",
       detail: "The builder has not attached evidence for this quality requirement yet.",
     })),
@@ -95,7 +99,7 @@ function isPreview(value: Record<string, unknown>): value is Record<string, unkn
   return typeof value.url === "string"
 }
 
-function isEvidence(value: Record<string, unknown>): value is Evidence {
+function isAgentEvidence(value: Record<string, unknown>): value is Omit<Evidence, "source" | "recordedAt" | "receipt"> {
   return (
     typeof value.requirementId === "string" &&
     typeof value.requirement === "string" &&
@@ -129,6 +133,7 @@ function browserEvidence(part: ToolPart): Evidence | null {
       requirementId: input.requirementId,
       requirement: input.requirement,
       status: receipt.status === "passed" ? "passed" : "failed",
+      source: "host",
       method: `Browser ${receipt.kind || "check"}`,
       detail: receipt.summary || "Browser verification completed",
       receipt: receipt.id,

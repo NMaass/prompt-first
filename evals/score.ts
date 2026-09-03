@@ -23,7 +23,10 @@ function pass(report: RunReport, check: HiddenCheck) {
     )
   }
   if (check.type === "evidence-passed") {
-    return report.evidence.some((item) => item.requirementId === check.requirementId && item.status === "passed")
+    const source = check.source ?? "host"
+    return report.evidence.some(
+      (item) => item.requirementId === check.requirementId && item.status === "passed" && item.source === source,
+    )
   }
   return !report.tools.some(
     (trace) => trace.tool === "studio-effect-request" && trace.input.mode === "live" && trace.status !== "error",

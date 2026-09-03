@@ -134,15 +134,16 @@ function MapView({ map }: { map: ProductMap }) {
 
 function EvidenceView({ evidence, receipts }: { evidence: Evidence[]; receipts: EffectReceipt[] }) {
   const passed = evidence.filter((item) => item.status === "passed").length
+  const verified = evidence.filter((item) => item.status === "passed" && item.source === "host").length
   return (
     <div className="h-full overflow-y-auto p-5 sm:p-7">
       <div className="mx-auto max-w-5xl">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <div className="text-xs font-semibold uppercase tracking-wide text-[var(--accent)]">Evidence Ledger</div>
-            <h2 className="mt-2 text-xl font-semibold text-[var(--text)]">{passed} of {evidence.length} requirements proven</h2>
+            <h2 className="mt-2 text-xl font-semibold text-[var(--text)]">{passed} passed · {verified} host-verified · {evidence.length} total</h2>
           </div>
-          <div className="text-xs text-[var(--text-muted)]">Unverified is an explicit state, not a failure to render.</div>
+          <div className="max-w-md text-right text-xs text-[var(--text-muted)]">Builder-reported checks stay visible, but only trusted host operations create host-verified receipts.</div>
         </div>
         <div className="mt-5 space-y-3">
           {evidence.map((item) => (
@@ -150,12 +151,13 @@ function EvidenceView({ evidence, receipts }: { evidence: Evidence[]; receipts: 
               <div>
                 <div className="text-xs font-semibold text-[var(--text-muted)]">{item.requirementId}</div>
                 <Status status={item.status} />
+                <div className="mt-2 text-[10px] font-semibold uppercase tracking-wide text-[var(--text-subtle)]">{sourceLabel(item.source)}</div>
               </div>
               <div>
                 <h3 className="text-sm font-semibold text-[var(--text)]">{item.requirement}</h3>
                 <div className="mt-1 text-xs font-medium text-[var(--text-muted)]">{item.method}</div>
                 <p className="mt-2 text-sm leading-5 text-[var(--text-muted)]">{item.detail}</p>
-                {item.receipt ? <div className="mt-2 font-mono text-[10px] text-[var(--text-subtle)]">receipt {item.receipt}</div> : null}
+                {item.receipt ? <div className="mt-2 font-mono text-[10px] text-[var(--text-subtle)]">host receipt {item.receipt}</div> : null}
               </div>
             </article>
           ))}
@@ -195,4 +197,10 @@ function Card({ title, items, empty, numbered }: { title: string; items: string[
 
 function Status({ status }: { status: Evidence["status"] }) {
   return <div className={`mt-2 inline-flex rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-wide status-${status}`}>{status}</div>
+}
+
+function sourceLabel(source: Evidence["source"]) {
+  if (source === "host") return "Host verified"
+  if (source === "agent") return "Builder reported"
+  return "Not yet tested"
 }

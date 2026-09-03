@@ -1,12 +1,14 @@
 import { cp, mkdir, rm, writeFile } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
+import { PreviewRegistry } from "./previews"
 import type { MissionSeed, WorkspaceProvider, WorkspaceRecord } from "./types"
 
 const root = path.resolve(import.meta.dir, "../../..")
 
 export class LocalWorkspaceProvider implements WorkspaceProvider {
   #records = new Map<string, WorkspaceRecord>()
+  #previews = new PreviewRegistry()
   #base = process.env.STUDIO_WORKSPACE_ROOT || path.join(os.tmpdir(), "prompt-first-workspaces")
 
   async create(mission: MissionSeed) {
@@ -57,6 +59,7 @@ export class LocalWorkspaceProvider implements WorkspaceProvider {
     const record = this.#records.get(id)
     if (!record) return false
     this.#records.delete(id)
+    this.#previews.remove(record.directory)
     await rm(record.directory, { recursive: true, force: true })
     return true
   }
@@ -68,5 +71,15 @@ export class LocalWorkspaceProvider implements WorkspaceProvider {
   findByDirectory(directory: string) {
     const target = path.resolve(directory)
     return [...this.#records.values()].find((record) => path.resolve(record.directory) === target)
+  }
+
+  registerPreview(directory: string, url: string) {
+    if (!this.findByDirectory(directory)) throw new Error("Preview is not tied to a known workspace")
+    return this.#previews.register(directory, url)
+  }
+
+  allowsPreview(directory: string, url: string) {
+    if (!this.findByDirectory(directory)) return false
+    return this.#previews.allows(directory, url)
   }
 }

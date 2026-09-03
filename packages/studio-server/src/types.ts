@@ -25,6 +25,8 @@ export interface WorkspaceProvider {
   destroy(id: string): Promise<boolean>
   get(id: string): WorkspaceRecord | undefined
   findByDirectory(directory: string): WorkspaceRecord | undefined
+  registerPreview(directory: string, url: string): string
+  allowsPreview(directory: string, url: string): boolean
 }
 
 export type EffectKind = "email" | "payment" | "webhook" | "identity"

@@ -29,9 +29,9 @@ The repository therefore owns orchestration contracts and evidence, not the codi
                          ▼                            ▼
                 studio control plane          OpenCode runtime
                 ├── workspace provider        ├── studio-builder
-                ├── browser verifier          ├── studio-coach
-                └── effect gateway            ├── release-reviewer
-                                              ├── curated skills
+                ├── preview registry          ├── studio-coach
+                ├── browser verifier          ├── release-reviewer
+                └── effect gateway            ├── curated skills
                                               └── structured tools
                                                      │
                                                      ▼
@@ -53,9 +53,9 @@ The current package versions are pinned so benchmark comparisons are reproducibl
 
 ## Workspace provider
 
-`WorkspaceProvider` is the abstraction that owns lifecycle and directory identity.
+`WorkspaceProvider` owns lifecycle, directory identity, and the preview capability associated with that workspace.
 
-The repository includes `LocalWorkspaceProvider` for development. It creates a fresh temporary directory, copies the selected runtime profile and curated `.opencode` configuration, initializes Git, and records the mission. It is intentionally labeled `development-only`.
+The repository includes `LocalWorkspaceProvider` for development. It creates a fresh temporary directory, copies the selected runtime profile and curated `.opencode` configuration, initializes Git, records the mission, and tracks the one registered preview origin for that directory. It is intentionally labeled `development-only`.
 
 A production provider must replace it with an isolated environment that enforces:
 
@@ -81,7 +81,7 @@ A runtime profile is a bounded implementation environment with known operations:
 - snapshot/restore;
 - destroy.
 
-Only `web-react` ships in the first implementation. This makes the learner experience language-invisible without pretending arbitrary runtimes are equally safe or measurable.
+Only `web-react` ships in the first implementation. Its development preview is fixed to port 5173 with `--strictPort`. This makes the learner experience language-invisible without pretending arbitrary runtimes are equally safe or measurable.
 
 ## Agent roles
 
@@ -95,7 +95,7 @@ A non-implementing subagent. It identifies at most one product decision the lear
 
 ### `release-reviewer`
 
-A read-only implementation reviewer that may run verification. It checks evidence and unresolved risk independently from the builder.
+A read-only implementation reviewer that may run verification. It checks evidence and unresolved risk independently from the builder and distinguishes builder-reported claims from host receipts.
 
 ## Structured artifact tools
 
@@ -111,14 +111,26 @@ Agent/UI communication uses stable product-level tools:
 The UI derives state from completed tool parts in the session trace. This has several advantages over parsing prose:
 
 - artifact updates are typed;
-- evidence can be distinguished from explanation;
+- evidence provenance can be retained;
 - activity remains inspectable;
 - models can change without changing UI parsing;
 - benchmark runners can score the same trace without rendering the app.
 
+`studio-evidence` is explicitly builder-reported. It cannot mint a trusted receipt. Trusted browser receipts are returned only by the host control plane.
+
+## Preview registration
+
+`studio-preview` is not merely a UI announcement. Before a preview becomes usable, the tool registers its URL with the control plane using the current workspace directory.
+
+The local provider accepts only configured preview hosts and ports. By default this means `localhost` or `127.0.0.1` on port `5173`. The registry stores the origin against the workspace directory.
+
+Subsequent trusted browser checks must match that registered origin. A request for `127.0.0.1:4096`, `127.0.0.1:4100`, another workspace, or an arbitrary internet origin is rejected before Playwright launches.
+
+A production sandbox provider should replace this local rule with a sandbox-issued authenticated preview origin.
+
 ## Browser verification
 
-Browser checks execute in the trusted control plane with Playwright. The agent submits a preview URL and check kind through `studio-browser-check`; the host checks that the origin is allowlisted before launching a browser.
+Browser checks execute in the trusted control plane with Playwright. The agent submits a preview URL and check kind through `studio-browser-check`; the host requires the exact registered workspace origin and then performs defense-in-depth protocol/hostname validation before launching a browser.
 
 Initial checks are deliberately narrow:
 
@@ -128,7 +140,7 @@ Initial checks are deliberately narrow:
 - baseline semantic accessibility checks;
 - initial-load performance measurement.
 
-These checks create receipts. They do not claim complete accessibility, production performance, or semantic correctness.
+These checks create host receipts. They do not claim complete accessibility, production performance, business-logic correctness, or authorization correctness.
 
 ## External effect gateway
 
@@ -143,7 +155,7 @@ Email, payment, webhook, and identity effects are modeled as effects rather than
 7. Host executes through a trusted live executor with an idempotency key.
 8. UI displays the receipt.
 
-The model never receives the live credential or approval token.
+The model never receives the live credential or a reusable approval capability.
 
 ## Session flow
 
@@ -153,11 +165,12 @@ The model never receives the live credential or approval token.
 4. Browser creates a session scoped to the same directory.
 5. Browser submits the starter message with a stable message ID.
 6. Builder edits and runs the product immediately.
-7. Typed tool parts update learner artifacts.
-8. Host browser/effect operations attach receipts.
-9. Learner redirects or stops the builder at any time.
-10. Ending the mission aborts the session and destroys the development workspace.
+7. `studio-preview` registers and publishes the profile preview.
+8. Typed tool parts update learner artifacts.
+9. Host browser/effect operations attach provenance-bearing receipts.
+10. Learner redirects or stops the builder at any time.
+11. Ending the mission aborts the session and destroys the development workspace and preview registration.
 
 ## Deployment shape
 
-The current repo is a research implementation, not a hosted classroom deployment. A production deployment should put the web app and control plane behind one authenticated origin, move the agent workspace to a remote sandbox provider, broker previews through authenticated URLs, and introduce classroom identity/retention policy without exposing sandbox credentials to the browser.
+The current repo is a research implementation, not a hosted classroom deployment. A production deployment should put the web app and control plane behind one authenticated origin, move the agent workspace to a remote sandbox provider, broker previews through authenticated sandbox URLs, and introduce classroom identity/retention policy without exposing sandbox credentials to the browser.

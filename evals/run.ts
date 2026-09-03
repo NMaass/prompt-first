@@ -3,7 +3,7 @@ import path from "node:path"
 import { createOpencodeClient, type Event, type Part, type ToolPart } from "@opencode-ai/sdk"
 import { catalog, findMission } from "./catalog"
 import { score } from "./score"
-import type { EvalMission, RunReport, ToolTrace } from "./types"
+import type { EvalMission, EvidenceSource, RunReport, ToolTrace } from "./types"
 
 const args = parse(Bun.argv.slice(2))
 const selected = args.mission ? [findMission(args.mission)].filter((item): item is EvalMission => Boolean(item)) : catalog
@@ -155,13 +155,14 @@ function traces(parts: Part[]): ToolTrace[] {
 }
 
 function evidenceFrom(tools: ToolTrace[]) {
-  const evidence = new Map<string, { requirementId: string; status: string; method: string }>()
+  const evidence = new Map<string, { requirementId: string; status: string; source: EvidenceSource; method: string }>()
   for (const trace of tools) {
     if (trace.tool === "studio-evidence" && typeof trace.input.requirementId === "string") {
       evidence.set(trace.input.requirementId, {
         requirementId: trace.input.requirementId,
         status: String(trace.input.status),
-        method: String(trace.input.method || "agent evidence"),
+        source: "agent",
+        method: String(trace.input.method || "builder-reported evidence"),
       })
     }
     if (trace.tool === "studio-browser-check" && trace.status === "completed" && trace.output) {
@@ -171,6 +172,7 @@ function evidenceFrom(tools: ToolTrace[]) {
         evidence.set(parsed.requirementId, {
           requirementId: parsed.requirementId,
           status: parsed.receipt.status === "passed" ? "passed" : "failed",
+          source: "host",
           method: `browser ${parsed.receipt.kind || "check"}`,
         })
       } catch {

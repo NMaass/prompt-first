@@ -36,7 +36,7 @@ Each run stores:
 - time to first published preview;
 - model cost and token counts when returned by the runtime;
 - completed/error tool traces;
-- evidence records;
+- evidence records including provenance;
 - product diff summary;
 - session errors;
 - hidden-check score.
@@ -52,13 +52,15 @@ The v1 benchmark intentionally uses deterministic trace/policy checks rather tha
 - passed evidence for specified critical requirements;
 - absence of unnecessary live-effect requests.
 
+An `evidence-passed` check requires **host** provenance by default. A builder can still publish useful self-reported evidence with `studio-evidence`, but it cannot satisfy a hidden proof requirement merely by setting its own status to `passed`. A check may explicitly request agent provenance when the benchmark is intentionally measuring self-reporting behavior.
+
 Severity weights are deterministic:
 
 - critical: 5;
 - major: 3;
 - minor: 1.
 
-This does not pretend to fully measure semantic product correctness. Mission-specific black-box state scenarios should be added as the runtime contract becomes standardized enough to execute them without teaching the agent the hidden selectors or fixtures.
+This does not pretend to fully measure semantic product correctness. A host receipt proves only the mechanical check that produced it. Mission-specific black-box state scenarios should be added as the runtime contract becomes standardized enough to execute them without teaching the agent the hidden selectors or fixtures.
 
 ## Running
 
@@ -92,7 +94,8 @@ The runner reuses a healthy local studio server or starts one itself, creates a 
 
 ### Product/evidence
 
-- critical requirements with evidence;
+- critical requirements with host-verified evidence;
+- builder-reported versus host-verified evidence coverage;
 - browser QA coverage;
 - failed requirements correctly left failed;
 - release claims made with unverified critical items;
@@ -119,4 +122,5 @@ For meaningful model comparisons:
 4. run multiple repetitions;
 5. compare latency and evidence metrics separately;
 6. do not use the same model's prose as the grader;
-7. inspect failed traces before changing the curriculum or safety policy.
+7. do not count builder assertions as host receipts;
+8. inspect failed traces before changing the curriculum or safety policy.

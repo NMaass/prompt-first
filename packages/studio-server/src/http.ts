@@ -37,6 +37,11 @@ export function createControlServer(input: {
           return json({ removed: await input.workspaces.destroy(workspace[1]!) })
         }
 
+        if (request.method === "POST" && url.pathname === "/studio/preview/register") {
+          const body = preview(await request.json())
+          return json({ origin: input.workspaces.registerPreview(body.directory, body.url) }, 201)
+        }
+
         if (request.method === "POST" && url.pathname === "/studio/effects") {
           const body = effect(await request.json())
           if (!input.workspaces.get(body.workspaceId)) throw new Error("Unknown workspace")
@@ -62,7 +67,9 @@ export function createControlServer(input: {
 
         if (request.method === "POST" && url.pathname === "/studio/browser/check") {
           const body = browserCheck(await request.json())
-          if (!input.workspaces.findByDirectory(body.directory)) throw new Error("Browser check is not tied to a known workspace")
+          if (!input.workspaces.allowsPreview(body.directory, body.url)) {
+            throw new Error("Browser check must target the registered preview for this workspace")
+          }
           return json(await input.browser.check(body.url, body.kind))
         }
 
@@ -112,6 +119,14 @@ function execute(value: unknown) {
   return {
     idempotencyKey: text(item.idempotencyKey, "idempotencyKey"),
     approvalToken: item.approvalToken === undefined ? undefined : text(item.approvalToken, "approvalToken"),
+  }
+}
+
+function preview(value: unknown) {
+  const item = record(value)
+  return {
+    directory: text(item.directory, "directory"),
+    url: text(item.url, "url"),
   }
 }
 

@@ -11,7 +11,8 @@ Implemented:
 - provider/model override;
 - event-driven first-action and first-preview timing;
 - tool/evidence/diff/cost/token receipts;
-- deterministic hidden trace/policy scoring;
+- evidence provenance (`agent` versus `host`);
+- deterministic hidden trace/policy scoring that requires host evidence for proof checks by default;
 - repeated-run support.
 
 Not claimed:
@@ -33,7 +34,8 @@ Implemented:
 - structured artifact tools;
 - specialist skills;
 - host Playwright verification receipts;
-- explicit unverified evidence states;
+- workspace-bound preview registration with explicit host/port policy;
+- explicit unverified states and visible evidence provenance;
 - mock/live effect queue.
 
 Production blocker:
@@ -68,3 +70,12 @@ Not claimed:
 - classroom learners should be allowed to activate live mode without additional policy/identity controls.
 
 The point of Phase 3 is that a real provider can be added behind the host interface without teaching the model a new secret-bearing path.
+
+## Completion criterion
+
+Phases 0–3 are implementation-complete when install, typecheck, production build, unit/eval tests, and browser tests pass on the slim repository and the two core trust boundaries are enforced:
+
+1. a trusted browser check can only target the registered preview origin for its workspace;
+2. a builder-reported `passed` claim cannot be presented or scored as host-verified proof.
+
+Production readiness remains a separate milestone and requires a remote sandbox plus deployment/classroom controls described in the safety documentation.

@@ -52,6 +52,18 @@ A real external effect requires a learner-visible description of exactly what wi
 
 Approval is never represented by a generic "allow external access" switch.
 
+## Evidence provenance
+
+Evidence is not trusted merely because the builder says a requirement passed.
+
+- `studio-evidence` creates **builder-reported** evidence. It is visible and useful, but it cannot mint a host receipt.
+- host browser checks create **host-verified** receipts for the specific mechanical check that ran;
+- external effect receipts are created by the host effect gateway;
+- the UI labels provenance explicitly;
+- benchmark `evidence-passed` checks require host provenance by default.
+
+Host verification is still scoped evidence, not universal proof. A responsive overflow check does not prove business logic, and a smoke check does not prove authorization semantics.
+
 ## Host-owned secrets
 
 Secrets are environment variables of the trusted control plane or sandbox broker. They are not:
@@ -72,9 +84,16 @@ A live approval is one-time. A new idempotency key cannot be used to reuse an ol
 
 ## Browser verification and SSRF
 
-The browser verifier rejects preview URLs whose hostname is not explicitly allowlisted before launching Playwright. The local default allows only `localhost` and `127.0.0.1`.
+A browser check may target only a preview origin that has first been registered for the same workspace by `studio-preview`.
 
-A production sandbox adapter should issue authenticated preview origins and add only those controlled origins to the verifier policy. Do not broaden the verifier to arbitrary internet URLs.
+For the local `web-react` profile, preview registration additionally enforces an explicit hostname and port allowlist. The defaults are:
+
+- hosts: `localhost`, `127.0.0.1`;
+- port: `5173`.
+
+The runtime template uses port 5173 with `--strictPort`, so an agent cannot silently move the preview onto the OpenCode port, control-plane port, or another local service and ask the trusted Playwright process to fetch it.
+
+The browser verifier repeats hostname/protocol validation before launch as defense in depth. A production sandbox adapter should replace local host/port registration with authenticated preview origins issued by the sandbox provider. Do not broaden the verifier to arbitrary internet URLs.
 
 ## Local provider is not a sandbox
 
@@ -116,12 +135,13 @@ A future skill registry should attach:
 Safety-critical host operations fail closed:
 
 - unknown workspace → reject;
+- unregistered or wrong-port preview → reject;
 - live effect without approval → reject;
 - expired/mismatched/reused approval → reject;
 - no live executor → fail with receipt;
 - non-allowlisted browser origin → reject.
 
-A model or browser failure must not silently promote a mock effect to live mode.
+A model or browser failure must not silently promote a mock effect to live mode or a builder assertion to host-verified evidence.
 
 ## Red-team targets
 
@@ -130,11 +150,13 @@ Before a production pilot, include scenarios for:
 - prompt injection in imported content;
 - attempts to read outside the workspace;
 - localhost/internal-network scanning;
+- preview registration against host control services;
 - package-install exfiltration;
 - secrets in generated logs;
 - arbitrary live-effect destinations;
 - repeated payment/communication requests;
 - approval replay;
 - malicious preview URLs;
+- forged evidence receipts;
 - denial-of-service/resource exhaustion;
 - attempts to redefine studio tools or weaken permissions.

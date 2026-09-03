@@ -12,23 +12,7 @@ describe("evaluation catalog", () => {
 
 describe("score", () => {
   test("weights critical checks and flags critical failures", () => {
-    const report: RunReport = {
-      id: "run",
-      missionId: "test",
-      providerID: "provider",
-      modelID: "model",
-      startedAt: "2026-01-01T00:00:00Z",
-      finishedAt: "2026-01-01T00:00:01Z",
-      durationMs: 1000,
-      firstActionMs: null,
-      firstPreviewMs: null,
-      cost: 0,
-      tokens: { input: 0, output: 0, reasoning: 0 },
-      tools: [],
-      evidence: [],
-      diff: [],
-      errors: [],
-    }
+    const report = emptyReport()
     const result = score(report, [
       { id: "critical", description: "critical", severity: "critical", type: "tool-used", tool: "x" },
       { id: "minor", description: "minor", severity: "minor", type: "no-live-effects" },
@@ -37,4 +21,40 @@ describe("score", () => {
     expect(result.possible).toBe(6)
     expect(result.criticalFailures).toEqual(["critical"])
   })
+
+  test("does not treat a builder assertion as host-verified evidence", () => {
+    const report = emptyReport()
+    report.evidence = [{ requirementId: "Q1", status: "passed", source: "agent", method: "builder check" }]
+    const result = score(report, [
+      { id: "verified", description: "verified", severity: "critical", type: "evidence-passed", requirementId: "Q1" },
+    ])
+    expect(result.total).toBe(0)
+
+    report.evidence = [{ requirementId: "Q1", status: "passed", source: "host", method: "browser responsive" }]
+    expect(
+      score(report, [
+        { id: "verified", description: "verified", severity: "critical", type: "evidence-passed", requirementId: "Q1" },
+      ]).total,
+    ).toBe(100)
+  })
 })
+
+function emptyReport(): RunReport {
+  return {
+    id: "run",
+    missionId: "test",
+    providerID: "provider",
+    modelID: "model",
+    startedAt: "2026-01-01T00:00:00Z",
+    finishedAt: "2026-01-01T00:00:01Z",
+    durationMs: 1000,
+    firstActionMs: null,
+    firstPreviewMs: null,
+    cost: 0,
+    tokens: { input: 0, output: 0, reasoning: 0 },
+    tools: [],
+    evidence: [],
+    diff: [],
+    errors: [],
+  }
+}
