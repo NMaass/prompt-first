@@ -3,7 +3,7 @@ name: Apply repository reset
 on:
   push:
     branches: [codex/agentic-studio-reset]
-    paths: [.reset/**]
+    paths: [.reset/READY]
   workflow_dispatch:
 
 permissions:
