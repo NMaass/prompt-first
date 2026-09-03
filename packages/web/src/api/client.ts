@@ -1,4 +1,4 @@
-import { createOpencodeClient } from "@opencode-ai/sdk"
+import { createOpencodeClient } from "@opencode-ai/sdk/client"
 
 const baseUrl = import.meta.env.VITE_OPENCODE_URL || window.location.origin
 
