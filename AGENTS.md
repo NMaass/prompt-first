@@ -1,128 +1,51 @@
-- To regenerate the JavaScript SDK, run `./packages/sdk/js/script/build.ts`.
-- ALWAYS USE PARALLEL TOOLS WHEN APPLICABLE.
-- The default branch in this repo is `dev`.
-- Local `main` ref may not exist; use `dev` or `origin/dev` for diffs.
-- Prefer automation: execute requested actions without confirmation unless blocked by missing info or safety/irreversibility.
+# Agent instructions
 
-## Style Guide
+Prompt First is a research prototype for teaching agentic product engineering. Read `README.md` and `docs/` before making architectural changes.
 
-### General Principles
+## Product invariants
 
-- Keep things in one function unless composable or reusable
-- Avoid `try`/`catch` where possible
-- Avoid using the `any` type
-- Prefer single word variable names where possible
-- Use Bun APIs when possible, like `Bun.file()`
-- Rely on type inference when possible; avoid explicit type annotations or interfaces unless necessary for exports or clarity
-- Prefer functional array methods (flatMap, filter, map) over for loops; use type guards on filter to maintain type inference downstream
+- The learner owns product intent, tradeoffs, and release judgment. The builder owns implementation.
+- Do not reintroduce Blockly, block-based source representations, forced plan-approval workflows, or prompt-crafting lessons as the core experience.
+- Start useful reversible work quickly. Ask questions only when they materially affect product intent, consequences, or an architectural constraint.
+- Mission Contract, Product Map, and Evidence Ledger are first-class product state, not prose conventions hidden in chat history.
+- A requirement is not complete because an agent says it is. Prefer reproducible evidence.
+- Distinguish `proven`, `failed`, `inferred`, and `unverified` states in product-facing logic.
+- Safety belongs at capability and consequence boundaries. Input moderation is supplemental, not the primary sandbox boundary.
+- Real external effects require explicit, concrete approval. Mock integrations are the default for learner missions.
+- Keep the learner experience language-agnostic while keeping runtime profiles bounded and reproducible.
+- Keep model, agent-runtime, and sandbox-provider choices behind adapters where practical.
 
-### Naming
+## Code rules
 
-Prefer single word names for variables and functions. Only use multiple words if necessary.
+- TypeScript/React code must stay typed. Do not introduce `any` when a concrete or `unknown` type is feasible.
+- Prefer explicit interfaces at stable boundaries: agent events, sandbox providers, evidence, requirements, permissions, and integration contracts.
+- Keep UI geometry stable during async work. Do not replace controls with differently sized loading states or cause avoidable layout shift.
+- Use semantic controls and preserve keyboard accessibility.
+- Do not hide technical concepts through regex word replacement. Explain them contextually when they matter.
+- Do not add code comments that merely narrate obvious implementation. Prefer clear naming and structure.
+- Avoid speculative framework layers. Add an abstraction when there are at least two implementations planned or when it enforces a critical boundary.
+- Do not tightly couple Prompt First pedagogy to OpenCode internals without documenting why an external adapter is insufficient.
 
-### Naming Enforcement (Read This)
+## Scope discipline
 
-THIS RULE IS MANDATORY FOR AGENT WRITTEN CODE.
+The current milestone is one polished responsive-web vertical slice with mock integrations. Do not expand into arbitrary languages, arbitrary MCP servers, arbitrary third-party skills, live payments, or broad curriculum content unless the task explicitly requires it.
 
-- Use single word names by default for new locals, params, and helper functions.
-- Multi-word names are allowed only when a single word would be unclear or ambiguous.
-- Do not introduce new camelCase compounds when a short single-word alternative is clear.
-- Before finishing edits, review touched lines and shorten newly introduced identifiers where possible.
-- Good short names to prefer: `pid`, `cfg`, `err`, `opts`, `dir`, `root`, `child`, `state`, `timeout`.
-- Examples to avoid unless truly required: `inputPID`, `existingClient`, `connectTimeout`, `workerPath`.
+When removing legacy code, delete it rather than retaining compatibility shims unless a current path still depends on it.
 
-```ts
-// Good
-const foo = 1
-function journal(dir: string) {}
+## Verification
 
-// Bad
-const fooBar = 1
-function prepareJournal(dir: string) {}
+For touched packages, run the narrowest relevant checks first, then broader checks when practical:
+
+```bash
+bun --cwd packages/web run typecheck
+bun --cwd packages/web run build
+bun --cwd packages/opencode run typecheck
 ```
 
-Reduce total variable count by inlining when a value is only used once.
+From the repository root:
 
-```ts
-// Good
-const journal = await Bun.file(path.join(dir, "journal.json")).json()
-
-// Bad
-const journalPath = path.join(dir, "journal.json")
-const journal = await Bun.file(journalPath).json()
+```bash
+bun run typecheck
 ```
 
-### Destructuring
-
-Avoid unnecessary destructuring. Use dot notation to preserve context.
-
-```ts
-// Good
-obj.a
-obj.b
-
-// Bad
-const { a, b } = obj
-```
-
-### Variables
-
-Prefer `const` over `let`. Use ternaries or early returns instead of reassignment.
-
-```ts
-// Good
-const foo = condition ? 1 : 2
-
-// Bad
-let foo
-if (condition) foo = 1
-else foo = 2
-```
-
-### Control Flow
-
-Avoid `else` statements. Prefer early returns.
-
-```ts
-// Good
-function foo() {
-  if (condition) return 1
-  return 2
-}
-
-// Bad
-function foo() {
-  if (condition) return 1
-  else return 2
-}
-```
-
-### Schema Definitions (Drizzle)
-
-Use snake_case for field names so column names don't need to be redefined as strings.
-
-```ts
-// Good
-const table = sqliteTable("session", {
-  id: text().primaryKey(),
-  project_id: text().notNull(),
-  created_at: integer().notNull(),
-})
-
-// Bad
-const table = sqliteTable("session", {
-  id: text("id").primaryKey(),
-  projectID: text("project_id").notNull(),
-  createdAt: integer("created_at").notNull(),
-})
-```
-
-## Testing
-
-- Avoid mocks as much as possible
-- Test actual implementation, do not duplicate logic into tests
-- Tests cannot run from repo root (guard: `do-not-run-tests-from-root`); run from package dirs like `packages/opencode`.
-
-## Type Checking
-
-- Always run `bun typecheck` from package directories (e.g., `packages/opencode`), never `tsc` directly.
+When behavior is consequential, add or update deterministic tests and capture evidence rather than relying on manual inspection alone.
