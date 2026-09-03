@@ -1,141 +1,140 @@
-# Safety
+# Safety model
 
 ## Principle
 
-Prompt First should feel autonomous because ordinary reversible work is autonomous. Safety is enforced at capability and consequence boundaries rather than by serially interrupting every model response.
+Prompt First does not treat model moderation as its primary safety boundary. The system constrains what the agent can reach and distinguishes reversible computation from real-world consequences.
 
-Input moderation can run in parallel as one signal. It is not sufficient as the security boundary.
-
-## Why input-only safety is insufficient
-
-A benign request can still lead an agent or dependency to:
-
-- access files outside the project;
-- contact unintended network destinations;
-- expose credentials;
-- execute malicious install scripts;
-- follow prompt injection from imported content;
-- send real communication;
-- mutate production data;
-- create a real charge;
-- consume excessive compute, network, or model spend.
-
-These risks must remain constrained even when the model is wrong.
+Input classification may still be useful for abuse handling or classroom policy, but it must run in parallel where possible and must not substitute for containment.
 
 ## Consequence tiers
 
-### Tier 0 — automatic and silent
+### Tier 0 — automatic and reversible
 
-- project-local reads/writes;
-- approved commands;
-- development server startup;
-- deterministic tests;
-- browser interaction against the test product;
-- screenshots and traces;
-- mock-data mutation;
-- snapshot and rollback.
+Examples:
 
-### Tier 1 — automatic but explicitly recorded
+- read/write inside the learner workspace;
+- run approved local commands;
+- start the preview server;
+- execute tests;
+- use curated skills;
+- restore or rewrite generated product code.
 
-- approved package installation;
-- test-schema changes;
-- specialist skill invocation;
-- import of external reference content;
-- metered model/tool calls.
+These should not interrupt auto mode.
+
+### Tier 1 — automatic but receipted
+
+Examples:
+
+- browser verification;
+- dependency installation inside the workspace;
+- simulated external effects;
+- test-database mutations;
+- specialist-review invocation.
+
+The action can run automatically but must remain inspectable.
 
 ### Tier 2 — simulated by default
 
+Examples:
+
 - email and SMS;
-- payments and refunds;
-- OAuth and account linking;
+- payments;
+- identity actions;
 - webhooks;
 - destructive account actions;
-- analytics events;
-- administrator operations.
+- administrative effects.
 
-Simulation must produce realistic receipts so the learner can verify behavior without causing real effects.
+The first implementation uses explicit mock effect receipts so learners can practice system design without creating real consequences.
 
-### Tier 3 — explicit learner approval
+### Tier 3 — explicit approval
 
-- exposing or using a real credential;
-- communicating with a real person;
-- charging, refunding, or transferring money;
-- publishing publicly;
-- attaching a real domain;
-- mutating a production data store;
-- any irreversible or materially external action.
+A real external effect requires a learner-visible description of exactly what will happen, then a one-time approval token bound to that exact request.
 
-Approvals should describe the concrete effect, target, scope, and reversibility. Generic `Allow` prompts are insufficient.
+Approval is never represented by a generic "allow external access" switch.
 
-## Sandbox requirements
+## Host-owned secrets
 
-The production sandbox must enforce:
+Secrets are environment variables of the trusted control plane or sandbox broker. They are not:
 
-- filesystem isolation;
-- process isolation;
-- CPU, memory, disk, and duration limits;
-- network egress policy;
-- authenticated preview exposure;
-- secret brokering outside model context where possible;
-- spend limits;
-- snapshots/rollback;
-- complete tool receipts.
+- written into learner files;
+- included in prompts;
+- returned by custom agent tools;
+- placed in preview URLs;
+- stored in the Evidence Ledger.
 
-The model should not be capable of granting itself additional permissions.
+The provided generic live-effect executor uses a fixed host-configured destination. An agent cannot choose an arbitrary live webhook endpoint and inherit a host credential.
 
-## Network policy
+## Idempotency
 
-Outbound access should be deny-by-default for the learner runtime, then opened narrowly by profile or tool.
+Every effect execution requires an idempotency key. Repeating an identical effect execution returns the prior receipt rather than creating another consequence.
 
-Credentials should be injected by a broker only for an approved destination and operation. Avoid writing durable secrets into project files or exposing raw secret values to the model.
+A live approval is one-time. A new idempotency key cannot be used to reuse an old approval.
 
-## Skills and MCP
+## Browser verification and SSRF
 
-The first release should not allow arbitrary third-party skills or MCP servers.
+The browser verifier rejects preview URLs whose hostname is not explicitly allowlisted before launching Playwright. The local default allows only `localhost` and `127.0.0.1`.
 
-Curated capabilities need:
+A production sandbox adapter should issue authenticated preview origins and add only those controlled origins to the verifier policy. Do not broaden the verifier to arbitrary internet URLs.
 
-- version and provenance;
-- declared tools and network access;
-- declared side effects;
+## Local provider is not a sandbox
+
+The repository's `LocalWorkspaceProvider` is a developer convenience. A temporary directory does not provide process, filesystem, resource, or network isolation. The server refuses to start with this provider when `NODE_ENV=production`.
+
+Before exposing Prompt First to untrusted learners, replace it with a remote sandbox implementation and verify:
+
+- workspace escape attempts fail;
+- internal-network destinations are unreachable;
+- host filesystem paths are unreachable;
+- resource exhaustion is bounded;
+- dependency install scripts cannot reach host credentials;
+- workspace processes die when the workspace is destroyed.
+
+## OpenCode permissions
+
+Curated workspace configuration denies external-directory access and the built-in question tool. Web fetch/search require approval. Studio artifact tools are allowed.
+
+These permissions improve user experience and reduce accidental capability, but they are not equivalent to an operating-system sandbox. Production security must remain enforceable even if the model ignores its instructions.
+
+## Skills and supply chain
+
+The first implementation copies a curated `.opencode` directory into every learner workspace. Arbitrary downloaded skills or MCP servers are not part of the default learner environment.
+
+A future skill registry should attach:
+
+- author/version;
+- content hash/signature;
+- allowed tools;
+- network destinations;
+- data classes;
+- side effects;
 - risk tier;
-- tests;
-- revocation capability.
-
-Imported content should be treated as untrusted input even when the learner requested it.
-
-## Moderation
-
-Input classification should be lightweight and parallelizable. It may block clearly unsafe or out-of-scope learner requests, but the builder should not wait on expensive output classification for ordinary reversible actions.
-
-Output safety should be achieved through:
-
-- capability enforcement;
-- deterministic validation;
-- consequence approvals;
-- evidence requirements;
-- content filters only where the product surface specifically requires them.
+- automated tests;
+- curriculum concepts.
 
 ## Failure behavior
 
-Security-relevant infrastructure should fail closed. For example, if the permission service cannot determine whether a real payment is authorized, the payment must not happen.
+Safety-critical host operations fail closed:
 
-Non-security learning aids may fail open when doing so cannot create an external consequence. The distinction must be explicit in code.
+- unknown workspace → reject;
+- live effect without approval → reject;
+- expired/mismatched/reused approval → reject;
+- no live executor → fail with receipt;
+- non-allowlisted browser origin → reject.
+
+A model or browser failure must not silently promote a mock effect to live mode.
 
 ## Red-team targets
 
-Before classroom use, test at minimum:
+Before a production pilot, include scenarios for:
 
-- prompt injection in webpages, files, package metadata, and skill content;
-- attempts to escape project filesystem boundaries;
-- access to metadata/internal network ranges;
-- secret exfiltration;
-- dependency install hooks;
-- command obfuscation;
-- excessive resource/spend requests;
-- fake evidence and unsupported completion claims;
-- bypassing simulation to reach real integrations;
-- social-engineering approval prompts;
-- cross-session data leakage.
-
-Safety results belong in the benchmark, not in an informal checklist.
+- prompt injection in imported content;
+- attempts to read outside the workspace;
+- localhost/internal-network scanning;
+- package-install exfiltration;
+- secrets in generated logs;
+- arbitrary live-effect destinations;
+- repeated payment/communication requests;
+- approval replay;
+- malicious preview URLs;
+- denial-of-service/resource exhaustion;
+- attempts to redefine studio tools or weaken permissions.

@@ -1,119 +1,122 @@
 # Evaluation
 
-## Purpose
+## Why the benchmark comes first
 
-Prompt First should be evaluated as both an agentic software system and a learning environment. A polished demo is not enough.
+Agentic product education cannot be evaluated by asking whether a generated screen looks impressive. The same mission needs to be replayable across models, runtime versions, prompts, and safety policies so failures can be attributed instead of blended together.
 
-The first milestone is a canonical benchmark of product missions that can be replayed across models, prompts, sandbox providers, and product changes.
+`evals/` is therefore a first-class part of the product.
 
-## Mission set
+## Catalog
 
-Start with roughly 25 missions spanning:
+The catalog contains 25 canonical missions spanning:
 
-- static interactive product;
-- responsive CRUD application;
-- authentication;
+- CRUD and forms;
+- constrained inventory;
 - roles and authorization;
-- booking or limited inventory;
-- mock email;
-- mock payment;
-- file upload;
-- dashboard;
-- accessibility-sensitive form;
-- unreliable network;
-- export and deletion flows.
+- concurrency;
+- simulated identity;
+- simulated communication and payments;
+- uploads and private data;
+- data visualization;
+- offline/reliability states;
+- export and deletion;
+- workflow integrity;
+- prerequisites and moderation.
 
-Each mission should define:
+The three learner missions are represented in the catalog but hidden benchmark checks are not included in learner prompts.
 
-- learner request;
-- hidden acceptance criteria;
-- seeded edge cases;
-- consequential actions;
-- expected capability boundaries;
-- required evidence;
-- adversarial inputs where appropriate.
+## Run receipt
 
-## Agent-system metrics
+Each run stores:
 
-Record at minimum:
+- mission ID;
+- provider/model;
+- start/end/duration;
+- time to first tool action;
+- time to first published preview;
+- model cost and token counts when returned by the runtime;
+- completed/error tool traces;
+- evidence records;
+- product diff summary;
+- session errors;
+- hidden-check score.
 
-- time to first visible action;
-- time to first useful preview;
-- valid tool-call rate;
-- successful build rate;
-- hidden critical-flow pass rate;
-- unsupported completion claims;
-- unnecessary broad rewrites;
-- policy-boundary attempts;
-- successful recovery after a failed action;
-- total model/tool cost;
-- total wall-clock latency.
+Run receipts are written to `evals/runs/` and are ignored by Git.
 
-Do not rely on self-reported agent success.
+## Hidden checks
 
-## Product-quality metrics
+The v1 benchmark intentionally uses deterministic trace/policy checks rather than an LLM grader. Checks include:
 
-Track requirement evidence coverage and failures across:
+- required artifact/tool use;
+- browser-verification categories;
+- passed evidence for specified critical requirements;
+- absence of unnecessary live-effect requests.
 
-- core behavior;
-- accessibility;
-- responsive/mobile layouts;
-- loading, empty, and error states;
-- data integrity;
-- authorization;
-- consequential flows;
-- performance expectations;
-- privacy/security requirements defined by the mission.
+Severity weights are deterministic:
 
-## Learning metrics
+- critical: 5;
+- major: 3;
+- minor: 1.
 
-The learner should not be rewarded for number of prompts, amount of generated code, or finishing scripted steps.
+This does not pretend to fully measure semantic product correctness. Mission-specific black-box state scenarios should be added as the runtime contract becomes standardized enough to execute them without teaching the agent the hidden selectors or fixtures.
 
-Measure whether learners can:
+## Running
 
-- state useful requirements;
-- identify important missing requirements;
-- choose appropriate skills/tools;
-- interpret evidence correctly;
-- reject unsupported agent claims;
-- distinguish mocks from live effects;
-- recognize consequential actions;
-- recover from an agent mistake;
-- make a defensible release decision.
+With an OpenRouter key configured:
 
-## Transfer test
+```bash
+bun run eval -- --mission shelter-shifts --repetitions 3
+```
 
-The strongest learning evaluation is transfer.
+Override the builder without modifying product code:
 
-Give the learner a new product mission with reduced coaching and, when practical, a different underlying model. Check whether they still establish requirements, delegate appropriately, inspect evidence, identify unverified behavior, and avoid premature live consequences.
+```bash
+bun run eval -- --mission shelter-shifts --model openrouter/z-ai/glm-5.3-flash
+```
 
-## Model evaluation
+Omit `--mission` to run the full catalog.
 
-For every candidate model, run repeated trials from identical snapshots. Pin provider routing during comparisons when possible.
+The runner reuses a healthy local studio server or starts one itself, creates a fresh workspace for every run, scopes the OpenCode session to that directory, waits for session idle, captures the trace/diff, and destroys the workspace.
 
-Record:
+## Metrics that matter
 
-- model;
-- provider;
-- routing mode;
-- context and output limits;
-- parameters;
-- token usage;
+### Agent/runtime
+
+- time to first action;
+- time to first preview;
+- valid tool completion rate;
+- error/retry rate;
 - cost;
-- latency;
-- tool-call failures;
-- benchmark outcomes.
+- token use;
+- unnecessary live-effect requests.
 
-GLM-5.3-Flash via OpenRouter is the first low-cost candidate, not the permanent default by assumption. Compare it against at least one stronger reference model.
+### Product/evidence
 
-## Release gates
+- critical requirements with evidence;
+- browser QA coverage;
+- failed requirements correctly left failed;
+- release claims made with unverified critical items;
+- consequence receipts and idempotency behavior.
 
-The first vertical slice is ready for learner testing only when:
+### Learning research
 
-- the benchmark can run reproducibly;
-- ordinary reversible work does not require repeated approvals;
-- blocked capabilities remain blocked under adversarial attempts;
-- mock integrations cannot accidentally reach live systems;
-- evidence states are derived from real receipts rather than agent prose;
-- the learner can recover from a failed build or bad agent change;
-- the UI clearly distinguishes proven, failed, inferred, and unverified requirements.
+These require actual learner studies rather than agent benchmark runs:
+
+- appropriate learner redirects/rejections;
+- ability to identify missing evidence;
+- ability to predict remaining risk;
+- transfer to a new mission;
+- transfer to a different underlying model;
+- quality of release decisions with scaffolding reduced.
+
+## Model comparison protocol
+
+For meaningful model comparisons:
+
+1. pin Prompt First commit and OpenCode/runtime versions;
+2. use identical mission and fresh workspace;
+3. record provider/model exactly;
+4. run multiple repetitions;
+5. compare latency and evidence metrics separately;
+6. do not use the same model's prose as the grader;
+7. inspect failed traces before changing the curriculum or safety policy.

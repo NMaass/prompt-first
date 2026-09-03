@@ -1,140 +1,125 @@
-# Product
+# Product model
 
-## Goal
+## Purpose
 
-Prompt First should give a learner the real experience of directing an autonomous software-building agent while keeping the environment safe enough for education. The product teaches judgment over software outcomes rather than source-code syntax.
+Prompt First is a flight simulator for agentic product engineering. A learner gets the real experience of directing an autonomous software builder while the environment makes professional product reasoning visible and consequential actions safe enough to practice.
 
-## Non-goals
+The educational target is not prompt cleverness or syntax recall. It is calibrated product judgment.
 
-Prompt First is not:
+## Responsibility split
 
-- a Blockly or Scratch replacement;
-- a prompt-writing course;
-- an IDE tutorial;
-- a one-shot app generator;
-- a system that hides all technical concepts from the learner;
-- a wrapper whose primary value is the underlying coding model.
+### Learner
 
-## Learner competencies
+The learner owns:
 
-A successful learner should be able to transfer these skills to a different agent, model, or coding workspace:
+- who the product is for;
+- what problem matters;
+- what success means;
+- important behavior and tradeoffs;
+- acceptable risk;
+- whether the result should ship.
 
-### Product framing
+### Builder
 
-Define the user, problem, outcome, constraints, acceptance criteria, quality requirements, and exclusions.
+The builder owns:
 
-### Delegation
+- implementation choices inside the selected runtime profile;
+- code changes;
+- dependency use inside policy;
+- local tests and repair loops;
+- invoking specialist skills;
+- producing evidence instead of unsupported completion claims.
 
-Choose when specialist skills or tools are appropriate and understand what evidence each capability can produce.
+### Coach
 
-### Verification
+The coach exists to transfer judgment, not to maximize completion. It should surface one high-value learner decision when the builder would otherwise silently decide product intent. It must not turn the experience into a question wizard.
 
-Require observable evidence instead of accepting fluent claims of completion.
+### Platform
 
-### Quality attributes
+The platform owns:
 
-Reason about accessibility, responsive behavior, loading/empty/error states, performance, reliability, privacy, authorization, and recovery.
-
-### Consequences
-
-Distinguish reversible local work from external effects such as communication, payments, publishing, credential use, and production mutation.
-
-### Calibrated trust
-
-Recognize that a polished preview or confident agent message is not proof that requirements are satisfied.
+- workspace and network boundaries;
+- credentials and external effects;
+- action receipts;
+- deterministic evaluation;
+- clear distinction between tested and unverified claims.
 
 ## Core artifacts
 
 ### Mission Contract
 
-A living product agreement inferred from conversation and edited throughout the mission. It should include:
+A living product agreement with:
 
-- target user and problem;
+- user;
+- problem;
 - desired outcome;
-- primary journeys;
 - acceptance criteria;
 - quality requirements;
-- constraints and exclusions;
+- constraints;
 - consequential actions;
 - unresolved decisions.
 
-The contract must not become a long form that blocks the first useful preview. Reversible implementation can begin while assumptions remain provisional.
+The contract is inferred and updated during normal product conversation. It is not a mandatory pre-build form.
 
 ### Product Map
 
-A learner-readable model of the system:
+A product-level system model containing:
 
-- screens;
 - actors and roles;
-- data objects;
+- user-facing surfaces;
+- important data;
 - integrations;
-- permissions;
-- critical flows;
-- consequential actions.
+- critical journeys;
+- permissions and consequential edges.
 
-This preserves the useful inspectability of the old block-based idea without forcing implementation into an artificial programming language.
+This preserves the inspectability that Blockly was trying to provide without forcing the learner to manipulate a fake programming language.
 
 ### Evidence Ledger
 
-Each important requirement has a status and evidence.
+Every important requirement has a status:
 
-Recommended states:
+- `unverified`;
+- `testing`;
+- `passed`;
+- `failed`.
 
-- `proven` — supported by reproducible evidence;
-- `failed` — evidence shows the requirement is not satisfied;
-- `inferred` — believed true from implementation or inspection but not directly verified;
-- `unverified` — no sufficient evidence yet;
-- `not_applicable` — explicitly removed from scope.
+Evidence records the verification method, result, and receipt. Agent prose alone is not evidence.
 
-Evidence can include browser traces, screenshots, deterministic tests, state inspection, network/console observations, accessibility checks, or mock-integration receipts.
+## Learner competencies
 
-## Agent roles
-
-### Builder
-
-Optimized to create a high-quality working product quickly. It can implement, test, repair, invoke skills, and collect evidence autonomously within capability policy.
-
-### Coach
-
-Optimized for learning. It should intervene when the learner needs to make a product decision, interpret evidence, or notice an important gap. It should not block implementation merely to force participation.
-
-These roles may initially share an underlying model but must have separate prompts, context, and success criteria.
+1. **Problem framing** — identify users, outcomes, constraints, and meaningful definitions of done.
+2. **Delegation** — use builders, skills, and tools for the right jobs without micromanaging implementation.
+3. **Verification** — demand observable evidence and distinguish a polished screen from a correct system.
+4. **Quality specification** — reason about responsive behavior, accessibility, performance, reliability, privacy, and error states.
+5. **Consequence awareness** — distinguish local changes, test data, simulated effects, and real external effects.
+6. **Calibrated trust** — understand what the agent proved, what it inferred, and what remains unknown.
 
 ## Interaction principles
 
-- Start doing useful reversible work immediately.
-- Ask high-value questions only when they materially affect intent, consequences, or architecture.
-- Do not force a plan-approval ritual before ordinary implementation.
-- Suggestion chips may reduce blank-page anxiety, but freeform intent is primary.
-- Tutorials are contextual and optional whenever possible.
-- Technical concepts should be explained when relevant, not hidden through word substitution.
-- Tool and skill activity should be visible enough to build a correct mental model without exposing private reasoning.
-- Every consequential action should make its consequence legible before approval.
+- Deliver a working product surface before demanding substantial curriculum effort.
+- Reversible implementation should begin as soon as intent is sufficient to make progress.
+- Ask a learner question only when a product decision matters or the builder is genuinely blocked.
+- Suggestion chips may reduce blank-page anxiety but must never become the primary conversational grammar.
+- Tutorials are just-in-time explanations attached to a concrete evidence gap.
+- Technical implementation details are available on request; they are not forbidden vocabulary.
+- Skills and tool calls should be legible enough for a learner to understand what capability was used and why.
 
-## Initial specialist skills
+## Runtime philosophy
 
-The first vertical slice should support four explicit review skills:
+The learner experience is language-agnostic. The runtime is intentionally bounded.
 
-1. **Requirements reviewer** — checks Mission Contract completeness and testability.
-2. **Responsive/mobile reviewer** — exercises key journeys at defined viewport sizes.
-3. **Accessibility reviewer** — combines automated checks with keyboard/interaction verification.
-4. **Consequential-flow reviewer** — identifies and tests destructive, financial, identity, communication, and production-like paths using simulations.
+The initial `web-react` profile provides one known build/test/preview contract so model quality, pedagogy, and safety can be measured without arbitrary toolchain variance. Future profiles can add Python services, mobile applications, or other environments through the same sandbox-provider interface.
 
-Later skills can cover performance, privacy, security, data integrity, integration contracts, and release review.
+## First-run target
 
-## First vertical slice
+A successful first session should feel like this:
 
-The first slice should prove the complete learning loop with one bounded responsive-web runtime and mock integrations. It should include:
-
-- a learner-entered product idea;
-- immediate agent activity;
-- a working preview;
-- continuously updated Mission Contract;
-- Product Map;
-- Evidence Ledger;
-- skill/tool receipts;
-- browser verification;
-- rollback/snapshots;
-- release review.
-
-Do not broaden into multiple runtimes, arbitrary MCP servers, arbitrary skills, real payments, or broad curriculum content until this loop is demonstrably good.
+1. Learner describes a useful product.
+2. The builder starts reversible work immediately.
+3. A preview appears while the Mission Contract is still being refined.
+4. The learner observes a real product behavior or gap.
+5. A specialist skill tests a quality property or consequential flow.
+6. Evidence appears in the ledger.
+7. The learner makes a meaningful product decision.
+8. The agent repairs and re-verifies the product.
+9. Release review distinguishes proven behavior from remaining uncertainty.

@@ -1,197 +1,163 @@
 # Architecture
 
-## Design constraint
+## Design objective
 
-Prompt First must preserve authentic autonomous agent behavior while keeping the learner and external world inside hard capability boundaries.
+Prompt First should feel like a real autonomous software workspace while keeping product-specific logic independent from any one coding-agent runtime, model provider, or sandbox vendor.
 
-The architecture should therefore separate four concerns:
+The repository therefore owns orchestration contracts and evidence, not the coding engine.
 
-1. learner experience;
-2. agent runtime;
-3. sandbox/capability enforcement;
-4. product evidence and learning state.
-
-Do not encode product pedagogy deep inside a fork of the coding agent unless there is no stable external seam.
-
-## High-level system
+## System diagram
 
 ```text
-Learner browser
-  |
-  v
-Prompt First application
-  |-- Coach context
-  |-- Mission Contract
-  |-- Product Map
-  |-- Evidence Ledger
-  |-- Capability policy
-  |-- Skill registry
-  |
-  v
-Agent adapter
-  |
-  +--> OpenCode today
-  +--> other coding agents/models later
-  |
-  v
-Sandbox adapter
-  |-- filesystem boundary
-  |-- process/compute limits
-  |-- network egress policy
-  |-- secret broker
-  |-- snapshots / rollback
-  |-- preview exposure
-  |
-  v
-Bounded project runtime
+┌──────────────────────────────── browser ────────────────────────────────┐
+│                                                                         │
+│  mission launcher                                                       │
+│       │                                                                 │
+│       ▼                                                                 │
+│  conversation ─────────── product artifacts ───────── preview iframe    │
+│       │                    │                                             │
+│       │                    ├── Mission Contract                          │
+│       │                    ├── Product Map                               │
+│       │                    └── Evidence Ledger                           │
+│       │                                                                 │
+│       ├──────── OpenCode SDK client ────────────────┐                   │
+│       │                                             │                   │
+│       └──────── studio control API ───────┐         │                   │
+└───────────────────────────────────────────┼─────────┼───────────────────┘
+                                            │         │
+                         ┌──────────────────┘         │
+                         ▼                            ▼
+                studio control plane          OpenCode runtime
+                ├── workspace provider        ├── studio-builder
+                ├── browser verifier          ├── studio-coach
+                └── effect gateway            ├── release-reviewer
+                                              ├── curated skills
+                                              └── structured tools
+                                                     │
+                                                     ▼
+                                               learner workspace
 ```
 
-## Learner-facing application
+## Runtime boundary
 
-`packages/web` should remain the product surface. It should not mirror an IDE.
+The web client speaks the published `@opencode-ai/sdk` API. The local control plane launches the pinned `opencode-ai` binary. OpenCode source is not vendored.
 
-Primary surfaces:
+This is deliberate:
 
-- conversation and contextual coaching;
-- live preview;
-- Mission Contract;
-- Product Map;
-- Evidence Ledger;
-- skill/tool activity and receipts;
-- release review.
+- upgrading or replacing the coding engine should not rewrite product UI;
+- model/provider experiments remain benchmark configuration;
+- security boundaries live outside model instructions;
+- Prompt First does not inherit unrelated TUI, release, provider, or community infrastructure.
 
-Raw code may exist behind an advanced/debug surface later, but source inspection is not the core learning interaction.
+The current package versions are pinned so benchmark comparisons are reproducible.
 
-## Agent adapter
+## Workspace provider
 
-The application should depend on a narrow agent interface instead of OpenCode-specific behavior throughout the UI.
+`WorkspaceProvider` is the abstraction that owns lifecycle and directory identity.
 
-Conceptually:
+The repository includes `LocalWorkspaceProvider` for development. It creates a fresh temporary directory, copies the selected runtime profile and curated `.opencode` configuration, initializes Git, and records the mission. It is intentionally labeled `development-only`.
 
-```ts
-interface AgentRuntime {
-  createSession(input: SessionInput): Promise<Session>
-  send(input: AgentInput): Promise<void>
-  subscribe(sessionId: string, onEvent: (event: AgentEvent) => void): () => void
-  stop(sessionId: string): Promise<void>
-}
-```
+A production provider must replace it with an isolated environment that enforces:
 
-Normalize agent events into product-level event types such as:
+- filesystem isolation;
+- process isolation;
+- CPU/memory/disk limits;
+- controlled outbound network access;
+- secret isolation;
+- authenticated preview exposure;
+- lifecycle cleanup and kill controls.
 
-- message;
-- tool_started;
-- tool_completed;
-- skill_started;
-- skill_completed;
-- evidence_created;
-- approval_requested;
-- preview_changed;
-- failure.
-
-The current OpenCode SDK is an implementation detail behind this boundary.
-
-## Sandbox adapter
-
-The first implementation may use E2B, Cloudflare Sandbox, Daytona, or another provider, but product code should target an internal interface.
-
-Required capabilities:
-
-```ts
-interface SandboxProvider {
-  create(profile: RuntimeProfile): Promise<Sandbox>
-  exec(command: ApprovedCommand): Promise<ExecutionResult>
-  readFile(path: WorkspacePath): Promise<string>
-  writeFile(path: WorkspacePath, content: string): Promise<void>
-  exposePreview(port: number): Promise<Preview>
-  snapshot(): Promise<SnapshotId>
-  restore(snapshot: SnapshotId): Promise<void>
-  configureEgress(policy: EgressPolicy): Promise<void>
-  destroy(): Promise<void>
-}
-```
-
-The provider must be replaceable. Safety policy belongs above provider-specific APIs.
+The learner UI must not change when the provider changes.
 
 ## Runtime profiles
 
-The learner experience can be language-agnostic while execution remains profile-based.
+A runtime profile is a bounded implementation environment with known operations:
 
-The initial profile should be a reproducible responsive web application environment with:
+- create;
+- install/warm;
+- run;
+- preview;
+- test;
+- snapshot/restore;
+- destroy.
 
-- a known framework and build tool;
-- fixed preview behavior;
-- browser automation;
-- a managed test database or fixture layer;
-- mock identity, email, payment, storage, and webhook adapters;
-- curated package policy;
-- deterministic quality checks.
+Only `web-react` ships in the first implementation. This makes the learner experience language-invisible without pretending arbitrary runtimes are equally safe or measurable.
 
-Do not allow arbitrary language/runtime selection in the first milestone.
+## Agent roles
 
-## Skills
+### `studio-builder`
 
-Skills are versioned, inspectable capability packages. The application should keep a registry with metadata beyond the skill instructions themselves:
+The primary autonomous implementer. It can perform reversible project work without plan approval, use specialist skills, run local commands, and publish artifacts. External directory access is denied. External web access requires approval.
 
-- id, name, author, and version;
-- content hash/signature;
-- allowed tools;
-- allowed network destinations;
-- accessible data classes;
-- expected side effects;
-- risk tier;
-- automated tests;
-- curriculum concepts covered.
+### `studio-coach`
 
-The first release should use only curated skills. Arbitrary downloaded skills or MCP servers are out of scope.
+A non-implementing subagent. It identifies at most one product decision the learner should own. It is not a tutorial state machine.
 
-## Product-state services
+### `release-reviewer`
 
-Mission Contract, Product Map, and Evidence Ledger should be explicit structured application data rather than inferred only from chat history or agent files.
+A read-only implementation reviewer that may run verification. It checks evidence and unresolved risk independently from the builder.
 
-Every update needs provenance:
+## Structured artifact tools
 
-- learner decision;
-- builder inference;
-- coach suggestion;
-- tool evidence;
-- deterministic check.
+Agent/UI communication uses stable product-level tools:
 
-This lets the UI distinguish facts, assumptions, and evidence without parsing prose.
+- `studio-contract`;
+- `studio-map`;
+- `studio-preview`;
+- `studio-evidence`;
+- `studio-browser-check`;
+- `studio-effect-request`.
 
-## Evidence model
+The UI derives state from completed tool parts in the session trace. This has several advantages over parsing prose:
 
-A requirement should link to one or more evidence records.
+- artifact updates are typed;
+- evidence can be distinguished from explanation;
+- activity remains inspectable;
+- models can change without changing UI parsing;
+- benchmark runners can score the same trace without rendering the app.
 
-Conceptually:
+## Browser verification
 
-```ts
-type EvidenceStatus = "proven" | "failed" | "inferred" | "unverified" | "not_applicable"
+Browser checks execute in the trusted control plane with Playwright. The agent submits a preview URL and check kind through `studio-browser-check`; the host checks that the origin is allowlisted before launching a browser.
 
-interface RequirementEvidence {
-  requirementId: string
-  status: EvidenceStatus
-  evidenceIds: string[]
-  checkedAt?: string
-}
-```
+Initial checks are deliberately narrow:
 
-Evidence records should be immutable receipts where possible. New evidence supersedes old evidence rather than silently rewriting history.
+- smoke/navigation + console errors;
+- responsive horizontal-overflow checks across three viewports;
+- keyboard focus reachability;
+- baseline semantic accessibility checks;
+- initial-load performance measurement.
 
-## Model routing
+These checks create receipts. They do not claim complete accessibility, production performance, or semantic correctness.
 
-Models are selected through an adapter. Record for every run:
+## External effect gateway
 
-- model and provider;
-- model/provider version where available;
-- routing mode;
-- parameters;
-- token usage and cost;
-- latency;
-- tool-call outcomes.
+Email, payment, webhook, and identity effects are modeled as effects rather than arbitrary network calls.
 
-Initial experiments may use GLM-5.3-Flash through OpenRouter, but benchmark results determine whether it is suitable for each role.
+1. Agent calls `studio-effect-request`.
+2. UI registers the exact effect with the control plane.
+3. Mock effects execute automatically and return a receipt.
+4. Live effects remain pending.
+5. Learner explicitly approves the displayed live effect.
+6. Host issues a short-lived one-time token bound to the exact effect fingerprint.
+7. Host executes through a trusted live executor with an idempotency key.
+8. UI displays the receipt.
 
-## Migration rule
+The model never receives the live credential or approval token.
 
-When touching retained OpenCode code, prefer adapters or upstream-compatible changes. Fork-only changes inside the runtime need a documented reason because they increase merge and maintenance cost.
+## Session flow
+
+1. Learner chooses or defines a mission.
+2. Control plane creates a dedicated workspace.
+3. Browser subscribes to OpenCode events scoped to that directory.
+4. Browser creates a session scoped to the same directory.
+5. Browser submits the starter message with a stable message ID.
+6. Builder edits and runs the product immediately.
+7. Typed tool parts update learner artifacts.
+8. Host browser/effect operations attach receipts.
+9. Learner redirects or stops the builder at any time.
+10. Ending the mission aborts the session and destroys the development workspace.
+
+## Deployment shape
+
+The current repo is a research implementation, not a hosted classroom deployment. A production deployment should put the web app and control plane behind one authenticated origin, move the agent workspace to a remote sandbox provider, broker previews through authenticated URLs, and introduce classroom identity/retention policy without exposing sandbox credentials to the browser.

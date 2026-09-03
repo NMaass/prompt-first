@@ -1,157 +1,107 @@
 # Prompt First
 
-Prompt First is an experimental browser workspace for learning **agentic product engineering**: defining what software should do and feel like, delegating implementation to an autonomous coding agent, and deciding whether the result is actually good enough to ship.
+Prompt First is an experimental browser workspace for learning **agentic product engineering**: defining what software should accomplish, delegating implementation to an autonomous coding agent, and deciding whether the resulting evidence is good enough to ship.
 
-The learner is not expected to program. The agent writes code. The learner owns product intent, requirements, tradeoffs, verification, and release judgment.
+The project deliberately does **not** teach programming syntax first. The learner works at the level of users, requirements, product behavior, quality attributes, integrations, consequences, and verification while the builder works in a real but bounded software environment.
 
-## Product thesis
+## What the learner owns
 
-Modern agentic coding changes the useful beginner skill set. Prompt First therefore teaches learners to:
+- the user and problem;
+- the desired outcome and acceptance criteria;
+- product tradeoffs and consequential decisions;
+- quality expectations such as accessibility, responsive behavior, performance, reliability, and privacy;
+- whether the evidence is sufficient to release.
 
-- define users, problems, outcomes, constraints, and acceptance criteria;
-- set quality requirements for accessibility, mobile layouts, performance, reliability, privacy, and security;
-- use specialist skills and tools intentionally;
-- distinguish mocks from real integrations and reversible actions from consequential ones;
-- inspect previews, browser traces, tests, screenshots, state changes, and other evidence;
-- challenge unsupported agent claims and iterate from observed product behavior;
-- make an explicit release decision based on what is proven, failed, or still unverified.
+The autonomous builder owns implementation. The platform owns containment, receipts, and consequence boundaries. A separate coach role is available to surface high-value product decisions without turning the experience into a scripted tutorial.
 
-This is deliberately **not** a Blockly/Scratch-style programming environment and not a conventional coding course with AI assistance.
+## Core workspace
 
-## Core product artifacts
+The learner-facing workspace is organized around four persistent surfaces:
 
-The learner-facing workspace is organized around three durable artifacts:
+1. **Preview** — the running product at desktop, tablet, and mobile sizes.
+2. **Mission Contract** — users, problem, outcome, acceptance criteria, quality requirements, constraints, and consequences.
+3. **Product Map** — actors, surfaces, data, integrations, critical flows, and permissions.
+4. **Evidence Ledger** — each important requirement marked passed, failed, testing, or unverified with a receipt for the claim.
 
-1. **Mission Contract** — who the product is for, what outcome matters, acceptance criteria, quality requirements, consequential actions, constraints, and unresolved decisions.
-2. **Product Map** — screens, actors, data, integrations, permissions, critical flows, and consequential actions.
-3. **Evidence Ledger** — every important requirement linked to evidence such as a browser run, screenshot, test, state inspection, or an explicit `unverified` status.
+Skills and tool calls remain visible as product activity. Raw chain-of-thought is not part of the interface.
 
-The builder can begin reversible implementation immediately while these artifacts are refined in parallel.
+## Architecture
 
-## Responsibilities
+Prompt First is no longer an OpenCode fork. The repository owns only the product-specific layers:
 
-### Learner
+```text
+browser workspace
+      │
+      ├── OpenCode SDK client ──► pinned OpenCode runtime
+      │                              │
+      │                              └── learner workspace + curated skills/tools
+      │
+      └── studio control plane
+             ├── workspace provider
+             ├── browser verification
+             └── mock/live effect gateway
+```
 
-Owns intent, tradeoffs, risk tolerance, and the release decision.
+OpenCode is a replaceable agent runtime behind the session boundary. The initial runtime profile is a React/TypeScript web app, but implementation language is intentionally invisible to the learner.
 
-### Builder agent
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/SAFETY.md](docs/SAFETY.md).
 
-Owns implementation, tests, repairs, tool use, and evidence collection inside an approved runtime profile.
+## Initial model
 
-### Coach
+The default builder profile is `openrouter/z-ai/glm-5.3-flash`. Model selection is configuration, not product architecture. Benchmark runs can override the model and provider so behavior can be compared against stronger or newer models without changing the learner experience.
 
-Owns learning interventions. It should surface missing product reasoning and transfer responsibility to the learner without turning the experience into a quiz or blocking useful autonomous work.
-
-### Platform
-
-Owns containment, permissions, consequence boundaries, auditability, deterministic checks, and truthful status reporting.
-
-## Safety model
-
-Prompt First is designed for authentic auto mode, not constant approval prompts.
-
-Safety should be enforced primarily at capability and consequence boundaries:
-
-- project-local file edits, approved commands, tests, previews, screenshots, and mock-data mutations can run automatically;
-- approved package installs and metered tools can run automatically but must be recorded;
-- email, SMS, payments, OAuth, destructive account actions, and similar effects are simulated by default;
-- real credentials, real communication, money movement, public publishing, production data mutation, and other irreversible external effects require explicit approval;
-- sandbox filesystem, network, secret, compute, and spend boundaries must remain enforceable even if the model behaves incorrectly.
-
-Input classification may run in parallel with model work, but it is not the primary security boundary.
-
-See [docs/SAFETY.md](docs/SAFETY.md).
-
-## Runtime strategy
-
-The learner experience should be language-agnostic. The first runtime should not be.
-
-The initial vertical slice should use one bounded, reproducible web-app profile with known build, test, browser, database, and integration behavior. Additional language/runtime profiles can be added only when they have equivalent containment and verification support.
-
-The coding engine is intentionally replaceable. OpenCode is currently retained as the inner agent runtime, but Prompt First-specific product concepts should live outside OpenCode internals wherever possible.
-
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
-
-## Model strategy
-
-Model choice is an evaluation variable, not a product identity. The first benchmark target is GLM-5.3-Flash through OpenRouter because it is inexpensive enough for repeated agentic runs and supports tool use and multimodal review. The system must keep a model adapter and compare against stronger reference models before relying on any single model in production.
-
-## Current scope
-
-This repository is being reset around a single polished vertical slice:
-
-- freeform learner conversation;
-- immediate autonomous implementation;
-- live product preview;
-- Mission Contract, Product Map, and Evidence Ledger surfaces;
-- visible skill/tool activity;
-- bounded runtime and mock integrations;
-- browser-based verification;
-- requirements, responsive/mobile, accessibility, and consequential-flow review skills;
-- release review that separates proven, failed, inferred, and unverified claims.
-
-Anything that exists only to support the previous Blockly, forced plan-approval, prompt-crafting lesson, output-jargon rewriting, or serial safeguard design is legacy and should not be revived.
-
-## Evaluation before curriculum expansion
-
-Before building a broad course, Prompt First should maintain a canonical benchmark of product missions and measure:
-
-- time to first visible action and useful preview;
-- tool-call validity and build success;
-- hidden critical-flow success;
-- unsupported completion claims;
-- policy-boundary attempts;
-- recovery after failures;
-- evidence coverage;
-- cost and latency;
-- learner transfer to a new mission with less coaching.
-
-See [docs/EVALUATION.md](docs/EVALUATION.md).
-
-## Development
+## Running locally
 
 Requirements:
 
 - Bun 1.3.11
-
-Run the OpenCode backend:
+- an OpenRouter API key for the default model
+- a Chromium installation available to Playwright for browser checks
 
 ```bash
+cp .env.example .env
 bun install
+bunx playwright install chromium
 bun run dev
 ```
 
-Run the learner-facing web app in another terminal:
+The web app runs on `http://localhost:3000`, the studio control plane on `http://127.0.0.1:4100`, and the pinned OpenCode server on `http://127.0.0.1:4096`.
+
+## Evaluation
+
+The repository includes 25 canonical missions and a deterministic scorer. A run records model/provider, latency milestones, tool use, evidence coverage, session output, cost/tokens when available, and the product diff.
 
 ```bash
-bun run dev:web
+bun run eval -- --mission shelter-shifts --repetitions 3
 ```
 
-Typecheck:
+The benchmark is intentionally separate from the learner missions. Hidden checks belong to evaluation, not to the builder prompt.
 
-```bash
-bun run typecheck
-```
+See [docs/EVALUATION.md](docs/EVALUATION.md).
 
-The web package also supports:
+## Safety model
 
-```bash
-bun --cwd packages/web run build
-bun --cwd packages/web run typecheck
-```
+Reversible project work is allowed to run automatically. External consequences are handled separately:
 
-## Repository map
+- mock email/payment/webhook/identity effects run automatically and produce receipts;
+- live effects require an exact-scope, one-time approval token issued by the trusted host;
+- secrets stay in the host process and are never copied into learner workspaces or model context;
+- browser verification is performed by the host against allowlisted preview origins;
+- the included local directory provider is for development only and is **not** a production sandbox.
 
-- `packages/web` — learner-facing React workspace.
-- `packages/opencode` — retained OpenCode agent runtime.
-- `packages/sdk/js` — client SDK used by the web workspace.
-- `packages/plugin`, `packages/util`, `packages/script` — upstream runtime support required by OpenCode.
-- `docs/` — product, architecture, safety, and evaluation decisions.
+A production deployment must supply a remote sandbox provider with filesystem, process, resource, and network isolation before allowing untrusted learners.
 
-## Status
+## Project status
 
-Research prototype. The next milestone is a verified vertical slice, not feature breadth.
+The repository contains the complete first research implementation for phases 0–3:
+
+- **Phase 0:** benchmark catalog, runner, scoring, and run receipts;
+- **Phase 1:** agentic workspace vertical slice with real sessions, structured product artifacts, browser verification, and consequence UI;
+- **Phase 2:** three progressive learning missions plus freeform building;
+- **Phase 3:** mock-first integration gateway with a live-capable, approval-gated host boundary.
+
+Production deployment is intentionally not claimed. Remote sandbox infrastructure, classroom identity/administration, production integration providers, and validated learning outcomes remain deployment/research work rather than hidden assumptions.
 
 ## Upstream
 
-Prompt First is derived from [OpenCode](https://github.com/anomalyco/opencode). OpenCode is a separate project and retains its own licensing and attribution requirements.
+Prompt First uses the published [OpenCode](https://github.com/anomalyco/opencode) runtime and SDK. OpenCode is a separate project and retains its own licensing and attribution requirements.
